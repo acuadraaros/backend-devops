@@ -26,7 +26,7 @@ pipeline {
                 }  
             }            
         }
-        stage("Quality") {
+        stage("Quality Assurance - Scanner") {
             agent {
                 docker {
                     image 'sonarsource/sonar-scanner-cli'
@@ -42,7 +42,29 @@ pipeline {
                         }
                     }
                 }
-
+            }
+        }        
+        stage("Quality Assurance - Quality Gate") {
+            agent {
+                docker {
+                    image 'sonarsource/sonar-scanner-cli'
+                    args '--network=devops-infra_default'
+                    reuseNode true
+                }
+            }
+            stages {
+                stage('Quality Assurance - Sonarqube') {
+                    steps{
+                        script {
+                            timeout(time: 1, unit: 'MINUTES'){
+                                def qg = waitForQualityGate()
+                                if (qg.status != 'OK'){
+                                    error 'Pipeline aborted due quality gate'
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
